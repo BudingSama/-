@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<meta charset="UTF-8">
+		<title>AI</title>
+		<style type="text/css">
+			* {
+				margin: 0;
+				padding: 0;
+			}
+			
+			canvas {
+				margin-left: 100px;
+				border: 10px solid black;
+			}
+		</style>
+	</head>
+
+	<body>
+		<canvas id="mycanvas" width="750px" height="750px"></canvas>
+	</body>
+	<script src="js/jquery-3.2.1.min.js"></script>
+	<script type="text/javascript">
+		var canvas = document.getElementById("mycanvas");
+		var context = canvas.getContext("2d");
+		createmap();
+		//创建二维数组棋盘
+		var chessboard = [];
+		for(var i = 0; i < 15; i++) {
+			chessboard[i] = [];
+			for(var j = 0; j < 15; j++) {
+				chessboard[i][j] = 0;
+			}
+		}
+		//统计所有可能赢法
+		var count = 0;
+		var winindex = [];
+		//创建赢法统计数组
+		for(var i = 0; i < 15; i++) {
+			winindex[i] = [];
+			for(var j = 0; j < 15; j++) {
+				winindex[i][j] = [];
+			}
+		}
+		//竖赢
+		for(var i = 0; i < 15; i++) {
+			for(var j = 0; j < 11; j++) {
+				for(var k = 0; k < 5; k++) {
+					winindex[i][j + k][count] = true;
+				}
+				count++;
+			}
+		}
+		//横赢
+		for(var j = 0; j < 15; j++) {
+			for(var i = 0; i < 11; i++) {
+				for(var k = 0; k < 5; k++) {
+					winindex[i + k][j][count] = true;
+				}
+				count++;
+			}
+		}
+		//斜赢（正）
+		for(var i = 0; i < 11; i++) {
+			for(var j = 0; j < 11; j++) {
+				for(var k = 0; k < 5; k++) {
+					winindex[i + k][j + k][count] = true;
+				}
+				count++;
+			}
+		}
+		//斜赢（反）
+		for(var i = 0; i < 11; i++) {
+			for(var j = 14; j > 3; j--) {
+				for(var k = 0; k < 5; k++) {
+					winindex[i + k][j - k][count] = true;
+				}
+				count++;
+			}
+		}
+
+		//初始化玩家和电脑状态
+		var playerwin = [];
+		var AIwin = [];
+		for(var i = 0; i < count; i++) {
+			playerwin[i] = 0;
+			AIwin[i] = 0;
+		}
+		//创建棋盘
+		function createmap() {
+			context.strokeStyle = "black";
+			for(var i = 0; i < 15; i++) {
+				context.beginPath();
+				context.moveTo(0, i * 50 + 25);
+				context.lineTo(750, i * 50 + 25);
+				context.stroke();
+			}
+			for(var i = 0; i < 15; i++) {
+				context.beginPath();
+				context.moveTo(i * 50 + 25, 0);
+				context.lineTo(i * 50 + 25, 750);
+				context.stroke();
+			}
+		}
+
+		//玩家点击棋盘事件
+		var over = false;
+		var me = true;
+		$("canvas").click(function(event) {
+			if(over) {
+				return;
+			}
+			if(!me) {
+				return;
+			}
+			var x = Math.round((event.offsetX - 25) / 50);
+			var y = Math.round((event.offsetY - 25) / 50);
+			if(chessboard[x][y] == 0) {
+				createdot(x, y, "black");
+				chessboard[x][y] = 1;
+				//游戏状态判断
+				for(var i = 0; i < count; i++) {
+					if(winindex[x][y][i]) {
+						playerwin[i]++;
+//						console.log(playerwin)
+						AIwin[i] = 10;
+						if(playerwin[i] == 5) {
+							over = true;
+							alert("玩家胜")
+						}
+					}
+//					console.log(playerwin[i])
+				}
+				if(!over) {
+					me = !me;
+					AI();
+				}
+			}
+
+		})
+		//画子封装
+		function createdot(x, y, color) {
+			context.beginPath();
+			context.fillStyle = color;
+			context.arc(x * 50 + 25, y * 50 + 25, 20, 0, Math.PI * 2);
+			context.fill();
+		}
+		//AI算法封装
+		function AI() {
+			//存储下最优坐标
+			var a = 0;
+			var b = 0;
+			var max = 0;
+			//初始化得分统计数组
+			var playerscore = [];
+			var AIscore = [];
+			for(var i = 0; i < 15; i++) {
+				playerscore[i] = [];
+				AIscore[i] = [];
+				for(var j = 0; j < 15; j++) {
+					playerscore[i][j] = 0;
+					AIscore[i][j] = 0;
+				}
+			}
+			//统计下玩家落子得分
+			for(var i = 0; i < 15; i++) {
+				for(var j = 0; j < 15; j++) {
+					if(chessboard[i][j] == 0) {
+						for(var k = 0; k < count; k++) {
+							if(winindex[i][j][k]) {
+								if(playerwin[k] == 1) {
+									playerscore[i][j] += 200;
+//									console.log(1)
+								} else if(playerwin[k] == 2) {
+									playerscore[i][j] += 400;
+//									console.log(2)
+								} else if(playerwin[k] == 3) {
+									playerscore[i][j] += 2000;
+//									console.log(3)
+								} else if(playerwin[k] == 4) {
+									playerscore[i][j] += 10000;
+//									console.log(4)
+								}
+							}
+						}
+					}
+				}
+			}
+			//统计AI落子得分
+			for(var i = 0; i < 15; i++) {
+				for(var j = 0; j < 15; j++) {
+					if(chessboard[i][j] == 0) {
+						for(var k = 0; k < count; k++) {
+							if(winindex[i][j][k]) {
+								if(AIwin[k] == 1) {
+									AIscore[i][j] += 220;
+								} else if(AIwin[k] == 2) {
+									AIscore[i][j] += 420;
+								} else if(AIwin[k] == 3) {
+									AIscore[i][j] += 2200;
+								} else if(AIwin[k] == 4) {
+									AIscore[i][j] += 100000;
+								}
+							}
+						}
+					}
+				}
+			}
+			//收集最高得分的坐标
+			for(var i = 0; i < 15; i++) {
+				for(var j = 0; j < 15; j++) {
+					if(chessboard[i][j] == 0) {
+						if(playerscore[i][j] > max) {
+							max = playerscore[i][j];
+							a = i;
+							b = j;
+						} else if(playerscore[i][j] == max) {
+							if(AIscore[i][j] > AIscore[a][b]) {
+								a = i;
+								b = j;
+							}
+						}
+					}
+					if(chessboard[i][j] == 0) {
+						if(AIscore[i][j] > max) {
+							max = AIscore[i][j];
+							a = i;
+							b = j;
+						} else if(AIscore[i][j] == max) {
+							if(playerscore[i][j] > playerscore[a][b]) {
+								a = i;
+								b = j;
+							}
+						}
+					}
+				}
+			}
+			console.log(a,b,max)
+			createdot(a, b, "darkgray");
+			chessboard[a][b] = 2;
+			//统计AI的游戏状态
+			for(var i = 0; i < count; i++) {
+				if(winindex[a][b][i]) {
+					AIwin[i]++;
+					playerscore[i] = 10;
+					if(AIwin[i] == 5) {
+						over = true;
+						alert("电脑胜")
+					}
+				}
+
+			}
+			if(!over) {
+				me = !me;
+			}
+		}
+	</script>
+
+</html>
